@@ -1,4 +1,4 @@
-import React from "react";
+import React, { use } from "react";
 import { useForm } from "react-hook-form";
 import { signInSchema, signUpSchema } from "~/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,8 +15,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Link } from "react-router";
+import { useSignUpMutation } from "~/hooks/use-auth";
+import { toast } from "sonner";
 
-type SignUpFormData = z.infer<typeof signUpSchema>;
+export type SignUpFormData = z.infer<typeof signUpSchema>;
 
 const SignUp = () => {
   const form = useForm<SignUpFormData>({
@@ -29,8 +31,20 @@ const SignUp = () => {
     },
   });
 
+  const {mutate, isPending} = useSignUpMutation();
+
   const handleOnSubmit = (values: SignUpFormData) => {
     console.log(values);
+    mutate(values, {
+      onSuccess: () => {
+        toast.success("Account created successfully! Please sign in.");
+      },
+      onError: (error: any) => {
+        const errorMessage = error.response?.data?.message || "Something went wrong. Please try again.";
+        console.log(error);
+        toast.error(errorMessage);
+      },
+    });
   };
 
   return (
@@ -89,8 +103,8 @@ const SignUp = () => {
               )} 
               />
 
-              <Button type="submit" className="w-full font-bold">
-                Sign Up
+              <Button type="submit" className="w-full font-bold" disabled={isPending}>
+                {isPending ? "Creating account..." : "Sign Up"}
               </Button>
             </form>
           </Form>
