@@ -218,4 +218,134 @@ const verifyEmail = async (request, response) => {
   }
 };
 
-export { registerUser, loginUser, verifyEmail };
+const resetPasswordRequest = async (request, response) => {
+  try {
+    const { email } = request.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return response.status(400).json({ message: "User not found!" });
+    }
+
+    if (!user.isEmailVerified) {
+      return response
+        .status(400)
+        .json({ message: "Email not verified! Please verify your email." });
+    }
+
+    const existingVerification = await Verification.findOne({
+      userId: user._id,
+    });
+
+    if (existingVerification && existingVerification.expiresAt > new Date()) {
+      return response
+        .status(400)
+        .json({ message: "Reset password request already sent." });
+    }
+
+    if (existingVerification && existingVerification.expiresAt < new Date()) {
+      await Verification.findByIdAndDelete(existingVerification._id);
+    }
+
+    const resetPasswordToken = jwt.sign(
+      { userId: user._id, purpose: "reset-password" },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    await Verification.create({
+      userId: user._id,
+      token: resetPasswordToken,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    });
+
+    const resetPasswordLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetPasswordToken}`;
+
+    const emailBody = `<p>Click <a href="${resetPasswordLink}">here</a> to reset your password</p>`;
+
+    const emailSubject = "Reset your password";
+
+    const isEmailSent = await sendEmail(email, emailSubject, emailBody);
+
+    if (!isEmailSent) {
+      return response
+        .status(500)
+        .json({ message: "Failed to send reset password email" });
+    }
+
+    response
+      .status(200)
+      .json({ message: "Reset password email has been sent" });
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const verifyResetPasswordTokenAndResetPassword = async (request, response) => {
+  try {
+    const { token, newPassword, confirmPassword } = request.body;
+
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!payload) {
+      return response.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { userId, purpose } = payload;
+
+    if (purpose !== "reset-password") {
+      return response.status(401).json({ message: "Unauthorized" });
+    }
+
+    const verification = await Verification.findOne({
+      userId,
+      token,
+    });
+
+    if (!verification) {
+      return response.status(401).json({ message: "Unauthorized" });
+    }
+
+    const isTokenExpired = verification.expiresAt < new Date();
+
+    if (isTokenExpired) {
+      return response.status(401).json({ message: "Token expired" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return response.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return response
+        .status(400)
+        .json({ message: "Confirm password not match" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+
+    const hashPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashPassword;
+    await user.save();
+
+    await Verification.findByIdAndDelete(verification._id);
+
+    response.status(200).json({ message: "Password reset successfully!" });
+  } catch (error) {
+    console.log(error);
+    response.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export {
+  registerUser,
+  loginUser,
+  verifyEmail,
+  resetPasswordRequest,
+  verifyResetPasswordTokenAndResetPassword,
+};
