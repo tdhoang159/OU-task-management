@@ -14,13 +14,14 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useSignUpMutation } from "~/hooks/use-auth";
 import { toast } from "sonner";
 
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 
 const SignUp = () => {
+  const navigate = useNavigate();
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
@@ -37,7 +38,11 @@ const SignUp = () => {
     console.log(values);
     mutate(values, {
       onSuccess: () => {
-        toast.success("Account created successfully! Please sign in.");
+        toast.success("Email Verification Required", {
+          description: "Please check your email to verify your account. If you don't see the email, please check your spam folder.",
+        });
+        form.reset();
+        navigate("/sign-in");
       },
       onError: (error: any) => {
         const errorMessage = error.response?.data?.message || "Something went wrong. Please try again.";
