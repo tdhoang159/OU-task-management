@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Link } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 
 interface HeaderProps {
@@ -27,7 +27,8 @@ export const Header = ({
   onCreateWorkspace,
 }: HeaderProps) => {
   const { user, logout } = useAuth();
-  //const workspaces = [];
+  const {workspaces} = useLoaderData() as {workspaces: Workspace[]};
+  console.log(workspaces);
 
   return (
     <div className="bg-background sticky top-0 z-40 border-b">
@@ -55,17 +56,17 @@ export const Header = ({
             <DropdownMenuLabel>Workspace</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              {/* {workspaces.map((ws) => (
+              {workspaces.map((ws) => (
                 <DropdownMenuItem
                   key={ws._id}
                   onClick={() => onWorkspaceSelected(ws)}
                 >
                     {ws.color && (
-                        <WorkspaceAvatar color="ws.color" name={ws.name} />
+                        <WorkspaceAvatar color= {ws.color} name={ws.name} />
                     )}
                     <span className="ml-2">{ws.name}</span>
                 </DropdownMenuItem>
-              ))} */}
+              ))}
             </DropdownMenuGroup>
             <DropdownMenuGroup>
                 <DropdownMenuItem onClick={onCreateWorkspace}>

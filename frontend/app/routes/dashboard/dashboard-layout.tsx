@@ -4,8 +4,18 @@ import { Header } from "~/components/layout/header";
 import { SidebarComponent } from "~/components/layout/sidebar-component";
 import { LoaderUI } from "~/components/loaderUI";
 import { CreateWorkspace } from "~/components/workspace/create-workspace";
+import { fetchData } from "~/lib/fetch-util";
 import { useAuth } from "~/provider/auth-context";
 import type { Workspace } from "~/types";
+
+export const clientLoader = async () => {
+  try {
+    const [workspaces] = await Promise.all([fetchData("/workspaces")]);
+    return { workspaces };
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 const DashboardLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
